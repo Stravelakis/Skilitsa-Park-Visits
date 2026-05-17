@@ -1,0 +1,13 @@
+{
+    "apiVersion": 2,
+    "name": "dog-park/suggestion-form",
+    "title": "Dog Park Suggestion Form",
+    "category": "widgets",
+    "description": "Form for visitors to suggest new dog parks or improvements.",
+    "textdomain": "dogpark",
+    "supports": {
+        "html": false,
+        "multiple": true
+    },
+    "editorScript": "file:./index.js"
+}
