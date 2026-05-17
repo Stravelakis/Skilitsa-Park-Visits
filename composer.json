@@ -1,0 +1,21 @@
+{
+    "name": "dog-park-recommendations",
+    "description": "WordPress plugin for recommending the best hours to visit dog parks based on weather and park conditions.",
+    "type": "wordpress-plugin",
+    "license": "AGPL-3.0",
+    "authors": [
+        {
+            "name": "skilitsa.com",
+            "homepage": "https://skilitsa.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.4",
+        "composer/installers": "^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "DogPark\\": "includes/"
+        }
+    }
+}
