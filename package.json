@@ -4,19 +4,21 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "wp-scripts build",
+    "start": "wp-scripts start",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/DnD-World/dog-park-recommendations.git"
+    "url": "git+https://github.com/DnD-World/Skilitsa-Park-Visits.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/DnD-World/dog-park-recommendations/issues"
+    "url": "https://github.com/DnD-World/Skilitsa-Park-Visits/issues"
   },
-  "homepage": "https://github.com/DnD-World/dog-park-recommendations#readme",
+  "homepage": "https://github.com/DnD-World/Skilitsa-Park-Visits#readme",
   "devDependencies": {
     "@wordpress/scripts": "^32.2.0"
   }

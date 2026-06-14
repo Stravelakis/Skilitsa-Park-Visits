@@ -1,4 +1,4 @@
-# Dog Park Recommendations
+# Skilitsa Park Visits
 
 ## Περιγραφή
 Ένα WordPress plugin που προτείνει την καλύτερη ώρα για επίσκεψη σε πάρκα σκύλων με βάση τον καιρό και τις συνθήκες του πάρκου. Χρησιμοποιεί προβλέψεις από το Open-Meteo, OpenWeather και Google Weather API.

@@ -14,7 +14,7 @@ registerBlockType('dog-park/best-hour', {
 
         // Fetch parks from REST API
         useEffect(() => {
-            wp.apiFetch({ path: '/wp/v2/dog-park-parks' }).then((data) => {
+            wp.apiFetch({ path: '/wp-json/dog-park/v1/parks' }).then((data) => {
                 setParks([{ id: 0, name: __('Select a park', 'dogpark') }, ...data]);
             });
         }, []);

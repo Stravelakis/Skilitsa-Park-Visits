@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, json, xml, curl
+          tools: composer:v2
+
+      - name: Install PHP dependencies
+        run: |
+          composer install --no-progress --prefer-dist || true
+
+      - name: Run PHP_CodeSniffer (WordPress standards)
+        run: |
+          composer global require squizlabs/php_codesniffer wp-coding-standards/wpcs --no-progress
+          phpcs --standard=WordPress includes/ blocks/ dog-park-recommendations.php || true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: Build JS assets
+        run: npm run build
+
+      - name: Validate block.json files
+        run: |
+          npx @wordpress/blocks validate-block-json ./blocks/dog-park-best-hour/block.json
+          npx @wordpress/blocks validate-block-json ./blocks/visitor-form/block.json
