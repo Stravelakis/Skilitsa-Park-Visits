@@ -35,6 +35,12 @@ jobs:
       - name: Build JS assets
         run: npm run build
 
+      - name: Verify build output
+        run: |
+          ls -la build/
+          ls -la blocks/dog-park-best-hour/
+          ls -la blocks/visitor-form/
+
       - name: Update version in plugin header
         run: |
           sed -i "s/Version: .*/Version: ${{ github.event.inputs.version }}/" dog-park-recommendations.php
