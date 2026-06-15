@@ -38,12 +38,14 @@ jobs:
       - name: Update version in plugin header
         run: |
           sed -i "s/Version: .*/Version: ${{ github.event.inputs.version }}/" dog-park-recommendations.php
+          sed -i "s/DOGPARK_VERSION', '.*'/DOGPARK_VERSION', '${{ github.event.inputs.version }}'/" dog-park-recommendations.php
 
       - name: Create release zip
         run: |
           mkdir -p dist
           ZIP_NAME="skilitsa-park-visits-${{ github.event.inputs.version }}.zip"
-          git archive --format=zip --prefix=skilitsa-park-visits/ -o "dist/${ZIP_NAME}" HEAD
+          # Create zip from working directory (includes version updates)
+          zip -r "dist/${ZIP_NAME}" . -x "dist/*" ".git/*" ".github/*" "node_modules/*" "vendor/*" "*.log" "*.zip" "composer.json" "package*.json" "readme.txt" "dog-park-best-hour/*"
           echo "ZIP_NAME=${ZIP_NAME}" >> $GITHUB_ENV
 
       - name: Create GitHub Release
