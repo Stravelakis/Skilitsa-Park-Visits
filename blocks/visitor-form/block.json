@@ -9,5 +9,5 @@
         "html": false,
         "multiple": true
     },
-    "editorScript": "file:./index.js"
+    "editorScript": "file:../../build/blocks/visitor-form/index.js"
 }

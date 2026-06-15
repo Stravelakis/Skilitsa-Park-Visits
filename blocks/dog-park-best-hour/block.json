@@ -19,5 +19,5 @@
         "html": false,
         "multiple": false
     },
-    "editorScript": "file:./index.js"
+    "editorScript": "file:../../build/blocks/dog-park-best-hour/index.js"
 }

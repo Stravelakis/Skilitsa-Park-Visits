@@ -21,5 +21,11 @@
   "homepage": "https://github.com/DnD-World/Skilitsa-Park-Visits#readme",
   "devDependencies": {
     "@wordpress/scripts": "^32.2.0"
+  },
+  "wpScripts": {
+    "entryPoints": {
+      "blocks/dog-park-best-hour/index": "./blocks/dog-park-best-hour/index.js",
+      "blocks/visitor-form/index": "./blocks/visitor-form/index.js"
+    }
   }
 }
