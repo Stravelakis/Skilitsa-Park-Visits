@@ -44,8 +44,20 @@ jobs:
         run: |
           mkdir -p dist
           ZIP_NAME="skilitsa-park-visits-${{ github.event.inputs.version }}.zip"
-          # Create zip from working directory (includes version updates)
-          zip -r "dist/${ZIP_NAME}" . -x "dist/*" ".git/*" ".github/*" "node_modules/*" "vendor/*" "*.log" "*.zip" "composer.json" "package*.json" "readme.txt" "dog-park-best-hour/*"
+          # Create zip from working directory with proper folder structure
+          cd ..
+          zip -r "Skilitsa-Park-Visits/dist/${ZIP_NAME}" "Skilitsa-Park-Visits" \
+            -x "Skilitsa-Park-Visits/dist/*" \
+            "Skilitsa-Park-Visits/.git/*" \
+            "Skilitsa-Park-Visits/.github/*" \
+            "Skilitsa-Park-Visits/node_modules/*" \
+            "Skilitsa-Park-Visits/vendor/*" \
+            "Skilitsa-Park-Visits/*.log" \
+            "Skilitsa-Park-Visits/*.zip" \
+            "Skilitsa-Park-Visits/composer.json" \
+            "Skilitsa-Park-Visits/package*.json" \
+            "Skilitsa-Park-Visits/readme.txt" \
+            "Skilitsa-Park-Visits/dog-park-best-hour/*"
           echo "ZIP_NAME=${ZIP_NAME}" >> $GITHUB_ENV
 
       - name: Create GitHub Release
