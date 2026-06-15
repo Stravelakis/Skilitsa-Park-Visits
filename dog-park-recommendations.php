@@ -30,6 +30,7 @@ require_once DOGPARK_PLUGIN_DIR . 'includes/class-scheduler.php';
 require_once DOGPARK_PLUGIN_DIR . 'includes/class-text.php';
 require_once DOGPARK_PLUGIN_DIR . 'includes/class-visitor-form.php';
 require_once DOGPARK_PLUGIN_DIR . 'includes/class-admin-suggestions.php';
+require_once DOGPARK_PLUGIN_DIR . 'includes/class-admin-parks.php';
 require_once DOGPARK_PLUGIN_DIR . 'blocks/class-block.php';
 
 // Activation/Deactivation hooks
