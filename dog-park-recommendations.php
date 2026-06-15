@@ -54,3 +54,33 @@ DogPark_Admin_Suggestions::init();
 // Initialize Gutenberg blocks
 DogPark_Block::init();
 DogPark_Visitor_Form::init();
+
+// REST endpoint to get WPS Hide Login URL
+add_action('rest_api_init', function() {
+    register_rest_route('dog-park/v1', '/login-url', [
+        'methods' => 'GET',
+        'callback' => function() {
+            $login_slug = get_option('whl_page', 'wp-login');
+            $home_url = home_url();
+            return [
+                'login_url' => $home_url . '/' . $login_slug,
+                'slug' => $login_slug,
+            ];
+        },
+        'permission_callback' => '__return_true',
+    ]);
+});
+
+add_action('rest_api_init', function() {
+    register_rest_route('dog-park/v1', '/wps-hide-login', [
+        'methods' => 'GET',
+        'callback' => function() {
+            $slug = get_option('whl_page');
+            return [
+                'slug' => $slug ? $slug : 'wp-login',
+                'full_url' => home_url() . '/' . ($slug ? $slug : 'wp-login'),
+            ];
+        },
+        'permission_callback' => '__return_true',
+    ]);
+});
