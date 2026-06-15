@@ -78,9 +78,15 @@ class DogPark_Scheduler {
     public static function cli_import_parks($args, $assoc_args) {
         $source = isset($assoc_args['source']) ? $assoc_args['source'] : 'csv';
         $file = isset($assoc_args['file']) ? $assoc_args['file'] : '';
+        $fetch_from_drive = isset($assoc_args['fetch-from-drive']) && $assoc_args['fetch-from-drive'];
         
-        if (empty($file) || !file_exists($file)) {
-            WP_CLI::error('File not found. Use --file=/path/to/file.csv');
+        if ($fetch_from_drive) {
+            $file = self::download_csv_from_drive();
+            if (!$file) {
+                WP_CLI::error('Failed to download CSV from Google Drive');
+            }
+        } elseif (empty($file) || !file_exists($file)) {
+            WP_CLI::error('File not found. Use --file=/path/to/file.csv or --fetch-from-drive');
         }
 
         if ($source === 'csv') {
@@ -88,6 +94,158 @@ class DogPark_Scheduler {
         } else {
             WP_CLI::error("Unknown source: {$source}. Use 'csv'.");
         }
+        
+        // Clean up temp file if downloaded from Drive
+        if ($fetch_from_drive && $file && file_exists($file)) {
+            @unlink($file);
+        }
+    }
+
+    private static function download_csv_from_drive() {
+        WP_CLI::line('Downloading CSV from Google Drive...');
+        
+        // File ID for "Location Municipality Parks Name.csv"
+        $file_id = '1FH02025PooN0NGOC_MS1IGLp3DkztxIV';
+        $temp_file = sys_get_temp_dir() . '/dog_parks_import_' . time() . '.csv';
+        
+        // Use the Google API script to download
+        $script_path = __DIR__ . '/../../google-api-download.php';
+        
+        // Create a simple download script
+        $download_script = <<<'PHP'
+<?php
+require_once ABSPATH . 'wp-admin/includes/file.php';
+
+$file_id = $argv[1];
+$output_path = $argv[2];
+
+// Use WordPress HTTP API to download from Google Drive
+// First, we need an access token
+$token_path = getenv('HOME') . '/.hermes/google_token.json';
+if (!file_exists($token_path)) {
+    fwrite(STDERR, "Token file not found at {$token_path}\n");
+    exit(1);
+}
+
+$token_data = json_decode(file_get_contents($token_path), true);
+$access_token = $token_data['access_token'] ?? null;
+
+if (!$access_token) {
+    fwrite(STDERR, "No access token found\n");
+    exit(1);
+}
+
+// Download the file
+$url = "https://www.googleapis.com/drive/v3/files/{$file_id}?alt=media";
+
+$response = wp_remote_get($url, [
+    'headers' => [
+        'Authorization' => 'Bearer ' . $access_token,
+    ],
+    'timeout' => 60,
+]);
+
+if (is_wp_error($response)) {
+    fwrite(STDERR, "Download failed: " . $response->get_error_message() . "\n");
+    exit(1);
+}
+
+$body = wp_remote_retrieve_body($response);
+$code = wp_remote_retrieve_response_code($response);
+
+if ($code !== 200) {
+    fwrite(STDERR, "Download failed with code {$code}: {$body}\n");
+    exit(1);
+}
+
+file_put_contents($output_path, $body);
+echo $output_path . "\n";
+exit(0);
+PHP;
+
+        // Write temp download script
+        $script_file = sys_get_temp_dir() . '/gdrive_download_' . time() . '.php';
+        file_put_contents($script_file, $download_script);
+        
+        // Run it with WordPress loaded
+        $wp_load = $GLOBALS['wp_load_path'] ?? '';
+        if (!$wp_load) {
+            // Try to find wp-load.php
+            $possible_paths = [
+                '/var/www/html/wp-load.php',
+                '/home/u1234567/domains/nelly.skilitsa.com/public_html/wp-load.php',
+                '/home/stravelakis/public_html/wp-load.php',
+            ];
+            foreach ($possible_paths as $p) {
+                if (file_exists($p)) {
+                    $wp_load = $p;
+                    break;
+                }
+            }
+        }
+        
+        if (!$wp_load) {
+            WP_CLI::warning('Could not find wp-load.php, trying direct API call...');
+            return self::download_csv_direct($file_id, $temp_file);
+        }
+        
+        $cmd = "php {$script_file} {$file_id} {$temp_file}";
+        $result = WP_CLI::launch($cmd, false);
+        
+        @unlink($script_file);
+        
+        if ($result && file_exists($temp_file) && filesize($temp_file) > 0) {
+            WP_CLI::success("Downloaded CSV to {$temp_file}");
+            return $temp_file;
+        }
+        
+        // Fallback: direct API call
+        return self::download_csv_direct($file_id, $temp_file);
+    }
+
+    private static function download_csv_direct($file_id, $temp_file) {
+        WP_CLI::line('Trying direct API download...');
+        
+        $token_path = getenv('HOME') . '/.hermes/google_token.json';
+        if (!file_exists($token_path)) {
+            WP_CLI::error('Google token not found at ' . $token_path);
+        }
+        
+        $token_data = json_decode(file_get_contents($token_path), true);
+        $access_token = $token_data['access_token'] ?? null;
+        
+        if (!$access_token) {
+            WP_CLI::error('No access token in token file');
+        }
+        
+        $url = "https://www.googleapis.com/drive/v3/files/{$file_id}?alt=media";
+        
+        $response = wp_remote_get($url, [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $access_token,
+            ],
+            'timeout' => 60,
+        ]);
+        
+        if (is_wp_error($response)) {
+            WP_CLI::error('Download failed: ' . $response->get_error_message());
+        }
+        
+        $body = wp_remote_retrieve_body($response);
+        $code = wp_remote_retrieve_response_code($response);
+        
+        if ($code !== 200) {
+            WP_CLI::error("Download failed with code {$code}: {$body}");
+        }
+        
+        file_put_contents($temp_file, $body);
+        
+        if (file_exists($temp_file) && filesize($temp_file) > 0) {
+            WP_CLI::success("Downloaded CSV to {$temp_file}");
+            return $temp_file;
+        }
+        
+        return false;
     }
 
     private static function import_from_csv($file) {
