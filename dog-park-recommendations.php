@@ -84,3 +84,41 @@ add_action('rest_api_init', function() {
         'permission_callback' => '__return_true',
     ]);
 });
+
+// REST endpoint to trigger CSV import from Google Drive
+add_action('rest_api_init', function() {
+    register_rest_route('dog-park/v1', '/import-parks', [
+        'methods' => 'POST',
+        'callback' => function() {
+            if (!current_user_can('manage_options')) {
+                return new WP_Error('forbidden', 'Insufficient permissions', ['status' => 403]);
+            }
+            
+            // Include the scheduler class if not already loaded
+            if (!class_exists('DogPark_Scheduler')) {
+                require_once DOGPARK_PLUGIN_DIR . 'includes/class-scheduler.php';
+            }
+            
+            ob_start();
+            try {
+                DogPark_Scheduler::cli_import_parks([], ['fetch-from-drive' => true]);
+                $output = ob_get_clean();
+                return [
+                    'success' => true,
+                    'message' => 'Import completed',
+                    'output' => $output,
+                ];
+            } catch (Exception $e) {
+                $output = ob_get_clean();
+                return [
+                    'success' => false,
+                    'message' => 'Import failed: ' . $e->getMessage(),
+                    'output' => $output,
+                ];
+            }
+        },
+        'permission_callback' => function() {
+            return current_user_can('manage_options');
+        },
+    ]);
+});
