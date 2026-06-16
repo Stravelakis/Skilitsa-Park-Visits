@@ -90,7 +90,7 @@ class DogPark_Scheduler {
         }
 
         if ($source === 'csv') {
-            self::import_from_csv($file);
+            $result = self::import_from_csv($file);
         } else {
             WP_CLI::error("Unknown source: {$source}. Use 'csv'.");
         }
@@ -99,123 +99,48 @@ class DogPark_Scheduler {
         if ($fetch_from_drive && $file && file_exists($file)) {
             @unlink($file);
         }
+        
+        // Output summary in CLI format
+        if (isset($result['imported'])) {
+            WP_CLI::success("Done! Imported: {$result['imported']}, Updated: {$result['updated']}, Skipped: {$result['skipped']}, Errors: {$result['errors']}");
+        }
     }
 
-    private static function download_csv_from_drive() {
-        WP_CLI::line('Downloading CSV from Google Drive...');
+    // Web-compatible import method (returns array instead of using WP_CLI)
+    public static function import_parks($fetch_from_drive = true) {
+        if ($fetch_from_drive) {
+            $file = self::download_csv_from_drive_web();
+            if (!$file) {
+                return ['success' => false, 'message' => 'Failed to download CSV from Google Drive'];
+            }
+        } else {
+            return ['success' => false, 'message' => 'File not provided and fetch-from-drive is false'];
+        }
+
+        $result = self::import_from_csv_web($file);
         
-        // File ID for "Location Municipality Parks Name.csv"
+        // Clean up temp file if downloaded from Drive
+        if ($file && file_exists($file)) {
+            @unlink($file);
+        }
+        
+        return $result;
+    }
+
+    private static function download_csv_from_drive_web() {
         $file_id = '1FH02025PooN0NGOC_MS1IGLp3DkztxIV';
         $temp_file = sys_get_temp_dir() . '/dog_parks_import_' . time() . '.csv';
         
-        // Use the Google API script to download
-        $script_path = __DIR__ . '/../../google-api-download.php';
-        
-        // Create a simple download script
-        $download_script = <<<'PHP'
-<?php
-require_once ABSPATH . 'wp-admin/includes/file.php';
-
-$file_id = $argv[1];
-$output_path = $argv[2];
-
-// Use WordPress HTTP API to download from Google Drive
-// First, we need an access token
-$token_path = getenv('HOME') . '/.hermes/google_token.json';
-if (!file_exists($token_path)) {
-    fwrite(STDERR, "Token file not found at {$token_path}\n");
-    exit(1);
-}
-
-$token_data = json_decode(file_get_contents($token_path), true);
-$access_token = $token_data['access_token'] ?? null;
-
-if (!$access_token) {
-    fwrite(STDERR, "No access token found\n");
-    exit(1);
-}
-
-// Download the file
-$url = "https://www.googleapis.com/drive/v3/files/{$file_id}?alt=media";
-
-$response = wp_remote_get($url, [
-    'headers' => [
-        'Authorization' => 'Bearer ' . $access_token,
-    ],
-    'timeout' => 60,
-]);
-
-if (is_wp_error($response)) {
-    fwrite(STDERR, "Download failed: " . $response->get_error_message() . "\n");
-    exit(1);
-}
-
-$body = wp_remote_retrieve_body($response);
-$code = wp_remote_retrieve_response_code($response);
-
-if ($code !== 200) {
-    fwrite(STDERR, "Download failed with code {$code}: {$body}\n");
-    exit(1);
-}
-
-file_put_contents($output_path, $body);
-echo $output_path . "\n";
-exit(0);
-PHP;
-
-        // Write temp download script
-        $script_file = sys_get_temp_dir() . '/gdrive_download_' . time() . '.php';
-        file_put_contents($script_file, $download_script);
-        
-        // Run it with WordPress loaded
-        $wp_load = $GLOBALS['wp_load_path'] ?? '';
-        if (!$wp_load) {
-            // Try to find wp-load.php
-            $possible_paths = [
-                '/var/www/html/wp-load.php',
-                '/home/u1234567/domains/nelly.skilitsa.com/public_html/wp-load.php',
-                '/home/stravelakis/public_html/wp-load.php',
-            ];
-            foreach ($possible_paths as $p) {
-                if (file_exists($p)) {
-                    $wp_load = $p;
-                    break;
-                }
-            }
-        }
-        
-        if (!$wp_load) {
-            WP_CLI::warning('Could not find wp-load.php, trying direct API call...');
-            return self::download_csv_direct($file_id, $temp_file);
-        }
-        
-        $cmd = "php {$script_file} {$file_id} {$temp_file}";
-        $result = WP_CLI::launch($cmd, false);
-        
-        @unlink($script_file);
-        
-        if ($result && file_exists($temp_file) && filesize($temp_file) > 0) {
-            WP_CLI::success("Downloaded CSV to {$temp_file}");
-            return $temp_file;
-        }
-        
-        // Fallback: direct API call
-        return self::download_csv_direct($file_id, $temp_file);
-    }
-
-    private static function download_csv_direct($file_id, $temp_file) {
-        WP_CLI::line('Trying direct API download...');
-        
         $token_path = getenv('HOME') . '/.hermes/google_token.json';
         if (!file_exists($token_path)) {
-            WP_CLI::error('Google token not found at ' . $token_path);
+            return false;
         }
         
         $token_data = json_decode(file_get_contents($token_path), true);
         $access_token = $token_data['access_token'] ?? null;
         
         if (!$access_token) {
-            WP_CLI::error('No access token in token file');
+            return false;
         }
         
         $url = "https://www.googleapis.com/drive/v3/files/{$file_id}?alt=media";
@@ -228,38 +153,36 @@ PHP;
         ]);
         
         if (is_wp_error($response)) {
-            WP_CLI::error('Download failed: ' . $response->get_error_message());
+            return false;
         }
         
         $body = wp_remote_retrieve_body($response);
         $code = wp_remote_retrieve_response_code($response);
         
         if ($code !== 200) {
-            WP_CLI::error("Download failed with code {$code}: {$body}");
+            return false;
         }
         
         file_put_contents($temp_file, $body);
         
         if (file_exists($temp_file) && filesize($temp_file) > 0) {
-            WP_CLI::success("Downloaded CSV to {$temp_file}");
             return $temp_file;
         }
         
         return false;
     }
 
-    private static function import_from_csv($file) {
-        WP_CLI::line("Importing parks from: {$file}");
-        
+    private static function import_from_csv_web($file) {
         $handle = fopen($file, 'r');
         if (!$handle) {
-            WP_CLI::error("Could not open file: {$file}");
+            return ['success' => false, 'message' => "Could not open file: {$file}"];
         }
 
         // Read header
         $header = fgetcsv($handle);
         if (!$header) {
-            WP_CLI::error('Empty CSV file');
+            fclose($handle);
+            return ['success' => false, 'message' => 'Empty CSV file'];
         }
 
         // Normalize header names
@@ -297,21 +220,24 @@ PHP;
                 if ($existing) {
                     DogPark_Parks::update_park($existing->id, $park_data);
                     $updated++;
-                    WP_CLI::line("Updated: {$park_data['name']} ({$park_data['municipality']})");
                 } else {
-                    $id = DogPark_Parks::insert_park($park_data);
+                    DogPark_Parks::insert_park($park_data);
                     $imported++;
-                    WP_CLI::line("Imported: {$park_data['name']} ({$park_data['municipality']}) [ID: {$id}]");
                 }
             } catch (Exception $e) {
                 $errors++;
-                WP_CLI::warning("Error importing row: " . $e->getMessage());
             }
         }
 
         fclose($handle);
 
-        WP_CLI::success("Done! Imported: {$imported}, Updated: {$updated}, Skipped: {$skipped}, Errors: {$errors}");
+        return [
+            'success' => true,
+            'imported' => $imported,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'errors' => $errors,
+        ];
     }
 
     private static function parse_csv_row($row, $col) {
