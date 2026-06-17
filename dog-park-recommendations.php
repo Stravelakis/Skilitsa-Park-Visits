@@ -94,28 +94,10 @@ add_action('rest_api_init', function() {
                 return new WP_Error('forbidden', 'Insufficient permissions', ['status' => 403]);
             }
             
-            // Include the scheduler class if not already loaded
-            if (!class_exists('DogPark_Scheduler')) {
-                require_once DOGPARK_PLUGIN_DIR . 'includes/class-scheduler.php';
-            }
+            // Call the web-compatible import method
+            $result = DogPark_Scheduler::import_parks(true);
             
-            ob_start();
-            try {
-                DogPark_Scheduler::cli_import_parks([], ['fetch-from-drive' => true]);
-                $output = ob_get_clean();
-                return [
-                    'success' => true,
-                    'message' => 'Import completed',
-                    'output' => $output,
-                ];
-            } catch (Exception $e) {
-                $output = ob_get_clean();
-                return [
-                    'success' => false,
-                    'message' => 'Import failed: ' . $e->getMessage(),
-                    'output' => $output,
-                ];
-            }
+            return $result;
         },
         'permission_callback' => function() {
             return current_user_can('manage_options');
