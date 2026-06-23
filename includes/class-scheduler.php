@@ -131,7 +131,7 @@ class DogPark_Scheduler {
         $file_id = '1FH02025PooN0NGOC_MS1IGLp3DkztxIV';
         $temp_file = sys_get_temp_dir() . '/dog_parks_import_' . time() . '.csv';
         
-        $token_path = getenv('HOME') . '/.hermes/google_token.json';
+        $token_path = '/tmp/google_token.json';
         if (!file_exists($token_path)) {
             return false;
         }
@@ -151,15 +151,22 @@ class DogPark_Scheduler {
             ],
             'timeout' => 60,
         ]);
-        
+
+        error_log('DOGPARK DEBUG: Drive download - token exists: ' . ($access_token ? 'yes' : 'no'), 3, '/tmp/dogpark-debug.log');
+        error_log('DOGPARK DEBUG: Drive download - is_wp_error: ' . (is_wp_error($response) ? 'yes' : 'no'), 3, '/tmp/dogpark-debug.log');
         if (is_wp_error($response)) {
+            error_log('DOGPARK DEBUG: Drive download - error: ' . $response->get_error_message(), 3, '/tmp/dogpark-debug.log');
             return false;
         }
-        
+
         $body = wp_remote_retrieve_body($response);
         $code = wp_remote_retrieve_response_code($response);
-        
+
+        error_log('DOGPARK DEBUG: Drive download - HTTP code: ' . $code, 3, '/tmp/dogpark-debug.log');
+        error_log('DOGPARK DEBUG: Drive download - body length: ' . strlen($body), 3, '/tmp/dogpark-debug.log');
+
         if ($code !== 200) {
+            error_log('DOGPARK DEBUG: Drive download - non-200 response: ' . substr($body, 0, 500));
             return false;
         }
         

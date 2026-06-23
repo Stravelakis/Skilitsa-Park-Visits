@@ -12,7 +12,7 @@ export function edit({ attributes, setAttributes }) {
 
 	// Fetch parks from REST API
 	useEffect(() => {
-		wp.apiFetch({ path: '/wp-json/dog-park/v1/parks' }).then((data) => {
+		wp.apiFetch({ path: '/wp-json/dog-park/v1/parks-list' }).then((data) => {
 			setParks([{ id: 0, name: __('Select a park', 'dogpark') }, ...data]);
 		});
 	}, []);

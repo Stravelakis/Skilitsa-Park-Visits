@@ -36,6 +36,11 @@ class DogPark_Admin {
             ],
             'sanitize_callback' => [__CLASS__, 'sanitize_providers']
         ]);
+
+        register_setting('dogpark_settings', 'dogpark_google_sheet_id', [
+            'default' => '1FH02025PooN0NGOC_MS1IGLp3DkztxIV',
+            'sanitize_callback' => 'sanitize_text_field'
+        ]);
     }
     
     public static function sanitize_weights($weights) {
@@ -61,25 +66,28 @@ class DogPark_Admin {
         ?>
         <div class="wrap">
             <h1>Dog Park Settings</h1>
+            <p>Configure how the plugin calculates the best visit time and where it gets the park data from.</p>
+            
             <form method="post" action="options.php">
                 <?php settings_fields('dogpark_settings'); ?>
                 <table class="form-table">
                     <tr>
-                        <th scope="row">Scoring Weights</th>
+                        <th scope="row">Scoring Weights (%)</th>
                         <td>
                             <fieldset>
-                                <label><input type="number" name="dogpark_scoring_weights[rain]" value="<?php echo esc_attr(get_option('dogpark_scoring_weights')['rain']); ?>" min="0" max="100"> Βροχή (%)</label><br>
-                                <label><input type="number" name="dogpark_scoring_weights[heat]" value="<?php echo esc_attr(get_option('dogpark_scoring_weights')['heat']); ?>" min="0" max="100"> Ζέστη (%)</label><br>
-                                <label><input type="number" name="dogpark_scoring_weights[uv]" value="<?php echo esc_attr(get_option('dogpark_scoring_weights')['uv']); ?>" min="0" max="100"> Υπεριώδης (%)</label><br>
-                                <label><input type="number" name="dogpark_scoring_weights[wind]" value="<?php echo esc_attr(get_option('dogpark_scoring_weights')['wind']); ?>" min="0" max="100"> Άνεμος (%)</label>
+                                <label><input type="number" name="dogpark_scoring_weights[rain]" value="<?php echo esc_attr(get_option('dogpark_scoring_weights')['rain']); ?>" min="0" max="100"> Rain (Βροχή)</label><br>
+                                <label><input type="number" name="dogpark_scoring_weights[heat]" value="<?php echo esc_attr(get_option('dogpark_scoring_weights')['heat']); ?>" min="0" max="100"> Heat (Ζέστη)</label><br>
+                                <label><input type="number" name="dogpark_scoring_weights[uv]" value="<?php echo esc_attr(get_option('dogpark_scoring_weights')['uv']); ?>" min="0" max="100"> UV Index (Υπεριώδης)</label><br>
+                                <label><input type="number" name="dogpark_scoring_weights[wind]" value="<?php echo esc_attr(get_option('dogpark_scoring_weights')['wind']); ?>" min="0" max="100"> Wind (Άνεμος)</label>
                             </fieldset>
-                            <p class="description">Τα βάρη πρέπει να αθροίζουν στο 100%.</p>
+                            <p class="description">These weights determine which weather factor is most important. Total must equal 100%.</p>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row">Admin Notifications</th>
                         <td>
                             <label><input type="checkbox" name="dogpark_admin_emails" value="1" <?php checked(get_option('dogpark_admin_emails'), 1); ?>> Notify admins on provider failures</label>
+                            <p class="description">Check this to receive a system alert if a weather provider (like Open-Meteo) goes offline.</p>
                         </td>
                     </tr>
                     <tr>
@@ -92,6 +100,14 @@ class DogPark_Admin {
                                 <label><input type="checkbox" name="dogpark_api_providers[google][enabled]" value="1" <?php checked(get_option('dogpark_api_providers')['google']['enabled'], 1); ?>> Google Weather (API Key Required)<br>
                                 <input type="text" name="dogpark_api_providers[google][api_key]" value="<?php echo esc_attr(get_option('dogpark_api_providers')['google']['api_key']); ?>" placeholder="API Key"></label>
                             </fieldset>
+                            <p class="description">Choose which weather service to use. Open-Meteo is free and requires no key.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Google Sheet ID</th>
+                        <td>
+                            <input type="text" name="dogpark_google_sheet_id" value="<?php echo esc_attr(get_option('dogpark_google_sheet_id')); ?>" class="regular-text">
+                            <p class="description">Paste the ID of your Google Sheet here (the long string in the URL). The plugin uses this to import the park list.</p>
                         </td>
                     </tr>
                 </table>
