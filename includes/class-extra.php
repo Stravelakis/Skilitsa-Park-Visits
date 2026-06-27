@@ -17,7 +17,7 @@ class DogPark_Extra {
         // Shortcode to display test park
         add_shortcode('dogpark_test', function(){
             global $wpdb;
-            $park = $wpdb->get_row($wpdb->prepare("SELECT * FROM wp_dogpark_parks WHERE name = %s", 'Test Park'));
+            $park = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}dogpark_parks WHERE name = %s", 'Test Park'));
             if(!$park) return 'No test park found.';
             return sprintf('Test Park: %s (%.5f, %.5f)', esc_html($park->name), $park->latitude, $park->longitude);
         });

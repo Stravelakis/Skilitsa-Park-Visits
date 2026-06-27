@@ -3,7 +3,7 @@
  * Plugin Name: Skilitsa Park Visits
  * Plugin URI: https://skilitsa.com/dog-park-plugin
  * Description: Προτείνει την καλύτερη ώρα για επίσκεψη σε πάρκα σκύλων με βάση τον καιρό και τις συνθήκες του πάρκου.
- * Version: 0.20
+ * Version: 0.20.0
  * Author: skilitsa.com
  * Author URI: https://skilitsa.com
  * License: AGPLv3
@@ -16,7 +16,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define constants
-define('DOGPARK_VERSION', '0.20');
+define('DOGPARK_VERSION', '0.20.0');
 define('DOGPARK_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('DOGPARK_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -27,7 +27,6 @@ require_once DOGPARK_PLUGIN_DIR . 'includes/class-providers.php';
 require_once DOGPARK_PLUGIN_DIR . 'includes/class-scoring.php';
 require_once DOGPARK_PLUGIN_DIR . 'includes/class-admin.php';
 require_once DOGPARK_PLUGIN_DIR . 'includes/class-scheduler.php';
-require_once DOGPARK_PLUGIN_DIR . 'includes/class-text.php';
 require_once DOGPARK_PLUGIN_DIR . 'includes/class-visitor-form.php';
 require_once DOGPARK_PLUGIN_DIR . 'includes/class-admin-suggestions.php';
 require_once DOGPARK_PLUGIN_DIR . 'includes/class-admin-parks.php';
@@ -44,9 +43,9 @@ function dogpark_activate() {
     DogPark_Scheduler::schedule_events();
     // Insert test park if not exists
     global $wpdb;
-    $exists = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM wp_dogpark_parks WHERE name = %s", 'Test Park'));
+    $exists = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}dogpark_parks WHERE name = %s", 'Test Park'));
     if(!$exists){
-        $wpdb->insert('wp_dogpark_parks', [
+        $wpdb->insert($wpdb->prefix . 'dogpark_parks', [
             'name' => 'Test Park',
             'latitude' => 37.9755,
             'longitude' => 23.7345,
@@ -63,9 +62,20 @@ function dogpark_deactivate() {
     DogPark_Scheduler::clear_events();
 }
 
+add_action('plugins_loaded', function() {
+    load_plugin_textdomain(
+        'dogpark',
+        false,
+        dirname(plugin_basename(__FILE__)) . '/languages'
+    );
+});
+
 // Initialize admin
 DogPark_Admin::init();
 DogPark_Admin_Suggestions::init();
+DogPark_Admin_Parks::init();
+DogPark_Extra::init();
+DogPark_Scheduler::register_cli_command();
 
 // Initialize Gutenberg blocks
 DogPark_Block::init();
@@ -84,7 +94,9 @@ add_action('rest_api_init', function() {
             $debug = [];
             
             // Check token file
-            $token_path = '/tmp/google_token.json';
+            $upload_dir = wp_upload_dir();
+            wp_mkdir_p($upload_dir['basedir'] . '/dogpark');
+            $token_path = $upload_dir['basedir'] . '/dogpark/google_token.json';
             $debug['token_path'] = $token_path;
             $debug['token_file_exists'] = file_exists($token_path) ? 'yes' : 'no';
             
@@ -97,11 +109,6 @@ add_action('rest_api_init', function() {
             // Call the web-compatible import method
             $result = DogPark_Scheduler::import_parks(true);
             
-            // Merge debug into result
-            if (is_array($result)) {
-                $result['_debug'] = $debug;
-            }
-            
             return $result;
         },
         'permission_callback' => function() {
@@ -110,27 +117,20 @@ add_action('rest_api_init', function() {
     ]);
 });
 
-// Add Settings link on Plugins page
-add_filter('plugin_action_links_' . plugin_basename(__FILE__), function($links){
-    $settings_link = '<a href="options-general.php?page=dogpark-settings">Settings</a>';
-    array_unshift($links, $settings_link);
-    return $links;
-});
-
-// Register Google Sheet ID setting
-add_action('admin_init', function(){
-    register_setting('dogpark_settings', 'dogpark_google_sheet_id', [
-        'default' => '1FH02025PooN0NGOC_MS1IGLp3DkztxIV',
-        'sanitize_callback' => 'sanitize_text_field'
-    ]);
-});
 
 // REST endpoint to get parks list for block dropdown
 add_action('rest_api_init', function() {
     register_rest_route('dog-park/v1', '/parks-list', [
         'methods' => 'GET',
         'callback' => function() {
-            return DogPark_Parks::get_all_parks();
+            $parks = DogPark_Parks::get_all_parks();
+            $restricted = array_map(function($park) {
+                return [
+                    'id' => $park->id,
+                    'name' => $park->name
+                ];
+            }, $parks);
+            return $restricted;
         },
         'permission_callback' => '__return_true',
     ]);

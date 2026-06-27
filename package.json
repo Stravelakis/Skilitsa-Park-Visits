@@ -1,6 +1,6 @@
 {
   "name": "dog-park-recommendations",
-  "version": "1.0.0",
+  "version": "0.20.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -14,7 +14,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "AGPL-3.0",
   "bugs": {
     "url": "https://github.com/DnD-World/Skilitsa-Park-Visits/issues"
   },
@@ -25,7 +25,8 @@
   "wpScripts": {
     "entryPoints": {
       "blocks/dog-park-best-hour/index": "./blocks/dog-park-best-hour/index.js",
-      "blocks/visitor-form/index": "./blocks/visitor-form/index.js"
+      "blocks/visitor-form/index": "./blocks/visitor-form/index.js",
+      "suggestion-form": "./src/suggestion-form.js"
     }
   }
 }

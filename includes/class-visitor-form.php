@@ -23,11 +23,25 @@ class DogPark_Visitor_Form {
     public static function handle_submission($request) {
         $params = $request->get_params();
         
-        // Verify CAPTCHA
-        if (!self::verify_captcha($params['captcha'])) {
-            return new WP_Error('invalid_captcha', 'Invalid CAPTCHA', ['status' => 400]);
+        // Check nonce
+        if (!wp_verify_nonce($params['dogpark_suggest_nonce'] ?? '', 'dogpark_suggest')) {
+            wp_send_json_error(['message' => 'Security check failed.']);
         }
         
+        // Check honeypot
+        if (!empty($params['dogpark_hp'])) {
+            // Silent discard — show success to fool bots
+            wp_send_json_success(['message' => 'ok']);
+        }
+
+        // Rate limiting
+        $ip = sanitize_text_field($_SERVER['REMOTE_ADDR'] ?? '');
+        $key = 'dogpark_rl_' . md5($ip);
+        if (get_transient($key)) {
+            wp_send_json_error(['message' => 'Πολλές υποβολές. Δοκίμασε σε λίγο. ⏳']);
+        }
+        set_transient($key, 1, 60); // 1 submission per minute per IP
+
         $suggestion_id = self::save_suggestion($params);
         if (is_wp_error($suggestion_id)) {
             return $suggestion_id;
@@ -39,11 +53,6 @@ class DogPark_Visitor_Form {
         }
         
         return ['success' => true, 'suggestion_id' => $suggestion_id];
-    }
-    
-    private static function verify_captcha($captcha_response) {
-        // Placeholder: Integrate with reCAPTCHA or similar
-        return true;
     }
     
     private static function save_suggestion($params) {
@@ -63,7 +72,7 @@ class DogPark_Visitor_Form {
             'created_at' => current_time('mysql')
         ];
         
-        $wpdb->insert('wp_dogpark_suggestions', $data);
+        $wpdb->insert($wpdb->prefix . 'dogpark_suggestions', $data);
         return $wpdb->insert_id;
     }
     
@@ -86,11 +95,26 @@ class DogPark_Visitor_Form {
     }
     
     public static function render_block($attributes) {
+        wp_enqueue_script(
+            'dogpark-suggestion-form',
+            plugins_url('../build/suggestion-form.js', __FILE__),
+            [],
+            DOGPARK_VERSION,
+            true
+        );
+        wp_localize_script('dogpark-suggestion-form', 'dogparkFormSettings', [
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'nonce'   => wp_create_nonce('dogpark_suggest'),
+            'restUrl' => rest_url('dog-park/v1/')
+        ]);
+
         ob_start();
         ?>
         <div class="dogpark-suggestion-form">
-            <h3><?php echo esc_html__('Προτείνετε ένα πάρκο ή βελτιώσεις', 'dogpark'); ?></h3>
+            <h3><?php echo esc_html__('Πες μας για ένα πάρκο που αξίζει! 🐶', 'dogpark'); ?></h3>
             <form id="dogpark-suggestion">
+                <?php wp_nonce_field('dogpark_suggest', 'dogpark_suggest_nonce'); ?>
+                <input type="text" name="dogpark_hp" value="" class="dogpark-honeypot" autocomplete="off" tabindex="-1">
                 <div class="form-field">
                     <label for="dogpark-park"><?php echo esc_html__('Επιλέξτε πάρκο ή προσθέστε νέο', 'dogpark'); ?></label>
                     <select id="dogpark-park" name="park_id" required>
@@ -156,12 +180,6 @@ class DogPark_Visitor_Form {
                     <textarea id="dogpark-notes" name="notes" rows="3"></textarea>
                 </div>
                 
-                <div class="form-field captcha-field">
-                    <!-- Placeholder for CAPTCHA -->
-                    <label><?php echo esc_html__('Παρακαλώ επιβεβαιώστε ότι δεν είστε ρομπότ', 'dogpark'); ?></label>
-                    <div class="captcha-placeholder">CAPTCHA</div>
-                </div>
-                
                 <div class="form-field">
                     <label>
                         <input type="checkbox" name="privacy" required>
@@ -173,63 +191,15 @@ class DogPark_Visitor_Form {
             </form>
             
             <div id="dogpark-submission-message" style="display: none;">
-                <?php echo esc_html__('Ευχαριστούμε! Η πρότασή σας εστάλη για審查.', 'dogpark'); ?>
+                <?php echo esc_html__('Τέλεια! Η πρότασή σου καταγράφηκε. Αν το πάρκο αξίζει, σύντομα θα το βρεις εδώ! 🐾', 'dogpark'); ?>
             </div>
         </div>
-        
-        <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const parkSelect = document.getElementById('dogpark-park');
-            const newParkFields = document.getElementById('dogpark-new-park-fields');
-            
-            parkSelect.addEventListener('change', function() {
-                newParkFields.style.display = this.value === 'new' ? 'block' : 'none';
-            });
-            
-            const form = document.getElementById('dogpark-suggestion');
-            form.addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                const formData = new FormData(form);
-                const data = {
-                    park_id: formData.get('park_id'),
-                    name: formData.get('name'),
-                    address: formData.get('address'),
-                    shade: formData.get('shade'),
-                    water: formData.get('water') ? 1 : 0,
-                    drainage: formData.get('drainage'),
-                    lighting: formData.get('lighting'),
-                    email: formData.get('email'),
-                    notes: formData.get('notes'),
-                    captcha: 'dummy-captcha-response' // Placeholder
-                };
-                
-                fetch('/wp-json/dog-park/v1/suggestions', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(data)
-                })
-                .then(response => response.json())
-                .then(result => {
-                    if (result.success) {
-                        form.style.display = 'none';
-                        document.getElementById('dogpark-submission-message').style.display = 'block';
-                    }
-                })
-                .catch(error => console.error('Error:', error));
-            });
-        });
-        </script>
         <?php
         return ob_get_clean();
     }
     
     private static function get_suggestion($id) {
         global $wpdb;
-        return $wpdb->get_row($wpdb->prepare("SELECT * FROM wp_dogpark_suggestions WHERE id = %d", $id));
+        return $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}dogpark_suggestions WHERE id = %d", $id));
     }
 }
-
-DogPark_Visitor_Form::init();

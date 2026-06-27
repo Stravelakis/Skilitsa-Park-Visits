@@ -125,5 +125,3 @@ class DogPark_Block {
         return ob_get_clean();
     }
 }
-
-DogPark_Block::init();
