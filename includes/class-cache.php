@@ -6,7 +6,7 @@ class DogPark_Cache {
         global $wpdb;
         $charset_collate = $wpdb->get_charset_collate();
         
-        $sql = "CREATE TABLE wp_dogpark_weather_cache (
+        $sql = "CREATE TABLE {$wpdb->prefix}dogpark_weather_cache (
             id BIGINT AUTO_INCREMENT PRIMARY KEY,
             park_id BIGINT NOT NULL,
             date DATE NOT NULL,
@@ -19,7 +19,7 @@ class DogPark_Cache {
             KEY (park_id, date)
         ) $charset_collate;";
         
-        $sql .= "CREATE TABLE wp_dogpark_suggestions (
+        $sql .= "CREATE TABLE {$wpdb->prefix}dogpark_suggestions (
             id BIGINT AUTO_INCREMENT PRIMARY KEY,
             park_id BIGINT DEFAULT NULL,
             name VARCHAR(100),
@@ -42,7 +42,7 @@ class DogPark_Cache {
         global $wpdb;
         return $wpdb->get_row(
             $wpdb->prepare(
-                "SELECT * FROM wp_dogpark_weather_cache WHERE park_id = %d AND date = %s",
+                "SELECT * FROM {$wpdb->prefix}dogpark_weather_cache WHERE park_id = %d AND date = %s",
                 $park_id, 
                 $date
             )
@@ -51,13 +51,13 @@ class DogPark_Cache {
     
     public static function set_cache($data) {
         global $wpdb;
-        $wpdb->replace('wp_dogpark_weather_cache', $data);
+        $wpdb->replace($wpdb->prefix . 'dogpark_weather_cache', $data);
     }
     
     public static function delete_cache($park_id, $date) {
         global $wpdb;
         $wpdb->delete(
-            'wp_dogpark_weather_cache',
+            $wpdb->prefix . 'dogpark_weather_cache',
             ['park_id' => $park_id, 'date' => $date]
         );
     }

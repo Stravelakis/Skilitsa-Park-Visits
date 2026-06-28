@@ -415,7 +415,7 @@ class DogPark_Scheduler {
         
         // Try exact match on name (which includes municipality)
         $park = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM wp_dogpark_parks WHERE name = %s",
+            "SELECT * FROM {$wpdb->prefix}dogpark_parks WHERE name = %s",
             $name
         ));
         
@@ -425,13 +425,10 @@ class DogPark_Scheduler {
         
         // Try partial match
         $park = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM wp_dogpark_parks WHERE name LIKE %s",
+            "SELECT * FROM {$wpdb->prefix}dogpark_parks WHERE name LIKE %s",
             "%{$name}%"
         ));
         
         return $park;
     }
 }
-
-DogPark_Scheduler::init();
-DogPark_Scheduler::register_cli_command();

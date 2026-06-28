@@ -41,7 +41,7 @@ class DogPark_Admin_Suggestions {
     
     private static function render_suggestions_list() {
         global $wpdb;
-        $suggestions = $wpdb->get_results("SELECT * FROM wp_dogpark_suggestions ORDER BY created_at DESC");
+        $suggestions = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}dogpark_suggestions ORDER BY created_at DESC");
         
         ?>
         <div class="wrap">
@@ -95,7 +95,7 @@ class DogPark_Admin_Suggestions {
     private static function render_view_suggestion() {
         global $wpdb;
         $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
-        $suggestion = $wpdb->get_row($wpdb->prepare("SELECT * FROM wp_dogpark_suggestions WHERE id = %d", $id));
+        $suggestion = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}dogpark_suggestions WHERE id = %d", $id));
         
         if (!$suggestion) {
             wp_die(__('Suggestion not found.'));
@@ -206,7 +206,7 @@ class DogPark_Admin_Suggestions {
         }
         
         $id = intval($_GET['id']);
-        $suggestion = $wpdb->get_row($wpdb->prepare("SELECT * FROM wp_dogpark_suggestions WHERE id = %d", $id));
+        $suggestion = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}dogpark_suggestions WHERE id = %d", $id));
         
         if (!$suggestion || $suggestion->status !== 'pending') {
             wp_die(__('Suggestion not found or already processed.'));
@@ -238,7 +238,7 @@ class DogPark_Admin_Suggestions {
         }
         
         // Update suggestion status
-        $wpdb->update('wp_dogpark_suggestions', ['status' => 'approved'], ['id' => $id]);
+        $wpdb->update($wpdb->prefix . 'dogpark_suggestions', ['status' => 'approved'], ['id' => $id]);
         
         // Notify user if email provided
         if ($suggestion->email && get_option('dogpark_admin_emails')) {
@@ -259,10 +259,10 @@ class DogPark_Admin_Suggestions {
         }
         
         $id = intval($_GET['id']);
-        $wpdb->update('wp_dogpark_suggestions', ['status' => 'rejected'], ['id' => $id]);
+        $wpdb->update($wpdb->prefix . 'dogpark_suggestions', ['status' => 'rejected'], ['id' => $id]);
         
         // Notify user if email provided
-        $suggestion = $wpdb->get_row($wpdb->prepare("SELECT * FROM wp_dogpark_suggestions WHERE id = %d", $id));
+        $suggestion = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}dogpark_suggestions WHERE id = %d", $id));
         if ($suggestion->email && get_option('dogpark_admin_emails')) {
             $subject = __('Your Dog Park Suggestion', 'dogpark');
             $message = __('Thank you for your suggestion, but it has been rejected.', 'dogpark');
