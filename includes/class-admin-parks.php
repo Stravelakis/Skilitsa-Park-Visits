@@ -80,7 +80,7 @@ class DogPark_Admin_Parks {
 			'latitude' => sanitize_text_field($_POST['latitude']),
 			'longitude' => sanitize_text_field($_POST['longitude']),
 			'shade' => sanitize_text_field($_POST['shade']),
-			'water' => ($_POST['water'] === '1') ? 1 : (($_POST['water'] === '0') ? 0 : null),
+			'water' => (($_POST['water'] ?? null) === '1') ? 1 : ((($_POST['water'] ?? null) === '0') ? 0 : null),
 			'drainage' => sanitize_text_field($_POST['drainage']),
 			'lighting' => sanitize_text_field($_POST['lighting']),
 			'notes' => sanitize_textarea_field($_POST['notes']),

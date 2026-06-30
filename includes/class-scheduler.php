@@ -22,6 +22,13 @@ class DogPark_Scheduler {
     }
     
     public static function refresh_all_parks() {
+        // This loop can make 200+ outbound HTTP calls across all parks; ask for more
+        // time where the host allows it (this is a no-op under PHP-FPM's
+        // request_terminate_timeout or when disabled by the host, which is fine).
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(0);
+        }
+
         $parks = DogPark_Parks::get_all_parks();
         $today = current_time('Y-m-d');
         $tomorrow = date('Y-m-d', strtotime('+1 day'));

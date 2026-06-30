@@ -27,7 +27,7 @@ class DogPark_Cache {
             address TEXT,
             shade ENUM('good', 'partial', 'bad', 'unknown') DEFAULT 'unknown',
             water BOOLEAN DEFAULT NULL,
-            drainage ENUM('good', 'moderate', 'bad') DEFAULT 'unknown',
+            drainage ENUM('good', 'moderate', 'bad', 'unknown') DEFAULT 'unknown',
             lighting ENUM('good', 'bad', 'unknown') DEFAULT 'unknown',
             notes TEXT,
             status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',

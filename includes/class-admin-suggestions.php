@@ -21,7 +21,7 @@ class DogPark_Admin_Suggestions {
             wp_die(__('You do not have sufficient permissions to access this page.'));
         }
         
-        $action = isset($_GET['action']) ? $_GET['action'] : 'list';
+        $action = isset($_GET['action']) ? sanitize_key($_GET['action']) : 'list';
         
         switch ($action) {
             case 'view':
@@ -41,6 +41,7 @@ class DogPark_Admin_Suggestions {
     
     private static function render_suggestions_list() {
         global $wpdb;
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- static query, no variables, table name only.
         $suggestions = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}dogpark_suggestions ORDER BY created_at DESC");
         
         ?>

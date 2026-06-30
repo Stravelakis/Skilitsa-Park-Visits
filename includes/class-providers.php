@@ -45,7 +45,6 @@ class DogPark_Providers {
         
         $providers_order = ['openmeteo', 'openweather', 'google'];
         $attempts = [];
-        $delay = 300; // 5 minutes delay between retries
         
         foreach ($providers_order as $provider) {
             if (!self::$providers[$provider]['enabled']) {
@@ -67,7 +66,10 @@ class DogPark_Providers {
                 ];
                 
                 if ($retry < $max_retries - 1) {
-                    sleep($delay);
+                    // Short exponential backoff (1s, 2s). The old 5-minute delay meant a
+                    // single flaky provider could stall the whole daily refresh run for
+                    // hours across ~100+ parks and blow past PHP's max_execution_time.
+                    sleep(min(2 ** $retry, 5));
                 }
             }
         }

@@ -60,14 +60,14 @@ class DogPark_Visitor_Form {
         
         $data = [
             'park_id' => isset($params['park_id']) && $params['park_id'] !== 'new' ? $params['park_id'] : null,
-            'name' => sanitize_text_field($params['name']),
+            'name' => isset($params['name']) ? sanitize_text_field($params['name']) : '',
             'email' => isset($params['email']) ? sanitize_email($params['email']) : null,
-            'address' => sanitize_textarea_field($params['address']),
-            'shade' => sanitize_text_field($params['shade']),
+            'address' => isset($params['address']) ? sanitize_textarea_field($params['address']) : '',
+            'shade' => isset($params['shade']) ? sanitize_text_field($params['shade']) : 'unknown',
             'water' => isset($params['water']) ? 1 : null,
-            'drainage' => sanitize_text_field($params['drainage']),
-            'lighting' => sanitize_text_field($params['lighting']),
-            'notes' => sanitize_textarea_field($params['notes']),
+            'drainage' => isset($params['drainage']) ? sanitize_text_field($params['drainage']) : 'unknown',
+            'lighting' => isset($params['lighting']) ? sanitize_text_field($params['lighting']) : 'unknown',
+            'notes' => isset($params['notes']) ? sanitize_textarea_field($params['notes']) : '',
             'status' => 'pending',
             'created_at' => current_time('mysql')
         ];
@@ -80,7 +80,8 @@ class DogPark_Visitor_Form {
         $suggestion = self::get_suggestion($suggestion_id);
         $subject = 'New Dog Park Suggestion: ' . ($suggestion->name ?: 'Unnamed Park');
         $message = "A new dog park suggestion has been submitted:\n\n";
-        $message .= "Park: " . ($suggestion->park_id ? DogPark_Parks::get_park_by_id($suggestion->park_id)->name : 'New Park') . "\n";
+        $linked_park = $suggestion->park_id ? DogPark_Parks::get_park_by_id($suggestion->park_id) : null;
+        $message .= "Park: " . ($linked_park ? $linked_park->name : 'New Park') . "\n";
         $message .= "Name: " . ($suggestion->name ?: 'N/A') . "\n";
         $message .= "Email: " . ($suggestion->email ?: 'N/A') . "\n";
         $message .= "Location: " . $suggestion->address . "\n";

@@ -13,7 +13,7 @@ class DogPark_Parks {
             longitude DECIMAL(11, 8) NOT NULL,
             shade ENUM('good', 'partial', 'bad', 'unknown') DEFAULT 'unknown',
             water BOOLEAN DEFAULT NULL,
-            drainage ENUM('good', 'moderate', 'bad') DEFAULT 'unknown',
+            drainage ENUM('good', 'moderate', 'bad', 'unknown') DEFAULT 'unknown',
             lighting ENUM('good', 'bad', 'unknown') DEFAULT 'unknown',
             notes TEXT
         ) $charset_collate;";
@@ -24,6 +24,7 @@ class DogPark_Parks {
     
     public static function get_all_parks() {
         global $wpdb;
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- static query, no variables, table name only.
         return $wpdb->get_results("SELECT * FROM {$wpdb->prefix}dogpark_parks");
     }
     

@@ -3,7 +3,7 @@
  * Plugin Name: Skilitsa Park Visits
  * Plugin URI: https://skilitsa.com/dog-park-plugin
  * Description: Προτείνει την καλύτερη ώρα για επίσκεψη σε πάρκα σκύλων με βάση τον καιρό και τις συνθήκες του πάρκου.
- * Version: 0.20.0
+ * Version: 0.21.0
  * Author: skilitsa.com
  * Author URI: https://skilitsa.com
  * License: AGPLv3
@@ -16,7 +16,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define constants
-define('DOGPARK_VERSION', '0.20.0');
+define('DOGPARK_VERSION', '0.21.0');
 define('DOGPARK_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('DOGPARK_PLUGIN_URL', plugin_dir_url(__FILE__));
 
