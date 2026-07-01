@@ -93,3 +93,55 @@ verified in a real WordPress environment.**
 4. Consider a basic PHPUnit smoke test for `DogPark_Providers::fetch_forecast()`
    (mocking `wp_remote_get`) given how central and previously-buggy that
    retry path is.
+
+
+---
+
+## Session: 2026-07-01 — v0.21.1
+
+**Who:** Claude (Sonnet 4.6)
+**Scope:** `class-scoring.php` deep review and overhaul. No other files touched.
+
+### What changed
+
+**Silent bugs fixed**
+- `$park->water === false` was a strict comparison against a MySQL BOOLEAN
+  column that wpdb returns as PHP string `"0"`. It NEVER matched, meaning
+  the -15 water penalty hadn't fired for any park since the plugin launched.
+  Fixed to `$park->water !== null && (int) $park->water === 0`.
+- `min()` / `max()` on the hourly temperature array would throw a PHP warning
+  if the forecast provider returned empty hourly data. Added early `return null`
+  guard at the top of `calculate_best_hour()`.
+
+**New scoring logic**
+- Cold weather penalty added to `calculate_heat_penalty()`: -2 below 15°C,
+  -6 below 10°C, -10 below 5°C (paw pad damage threshold). Previously
+  anything ≤ 20°C scored a perfect 0 penalty on temperature.
+- Drainage penalty under rain: `calculate_park_modifiers()` now checks
+  `$park->drainage` when `rain > 30%`. Bad drainage = -15, good drainage = +5.
+  The column existed and was fully populated; scoring just never used it.
+- Time-of-day preference bonus: +8 points for hours 6–8am and 6–8pm.
+  Nudges recommendations toward realistic Greek walk windows vs. midday.
+- Explanation text updated with Greek strings for cold and drainage conditions.
+
+### What was NOT touched this session
+- `calculate_best_hour()` still calls `DogPark_Parks::get_park_by_id()` inside
+  the loop (one DB query per hour × per park in the daily refresh). Should be
+  hoisted out of the loop — currently harmless since `get_park_by_id` likely
+  hits WordPress object cache, but worth confirming.
+- Weights still sum to 90 (rain 40 + heat 25 + UV 15 + wind 10). The natural
+  floor of ~10/100 in worst conditions is arguably intentional but undocumented.
+- No unit tests exist for the scoring logic. Given the water bug went undetected
+  this long, a PHPUnit test with mock park/forecast data would catch regressions.
+
+### Suggested next session
+1. Check whether `get_park_by_id()` inside `calculate_best_hour()` is actually
+   cached or is firing N DB queries per park — if uncached, hoist it out.
+2. Consider adding a `drought_bonus` modifier: parks with shade AND water during
+   a heat wave could score a meaningful bonus (currently they get separate
+   modifiers but no synergy bonus).
+3. Look at `class-providers.php` — verify the Open-Meteo response shape matches
+   what `class-scoring.php` expects (`hourly.rain`, `hourly.uv`, `hourly.temp`,
+   `hourly.wind`, `hourly.hour`) and that the field names are consistent.
+4. Admin UI: expose the scoring weights (`dogpark_scoring_weights` option) in
+   the settings page so they can be tuned without touching code.
