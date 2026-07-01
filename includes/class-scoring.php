@@ -7,6 +7,10 @@ class DogPark_Scoring {
         $weights = get_option('dogpark_scoring_weights', ['rain' => 40, 'heat' => 25, 'uv' => 15, 'wind' => 10]);
         $hourly_scores = [];
         
+        if (empty($forecast_data['hourly'])) {
+            return null;
+        }
+
         foreach ($forecast_data['hourly'] as $hour_data) {
             $score = 100; // Start with perfect score
             
@@ -30,6 +34,12 @@ class DogPark_Scoring {
             if ($park) {
                 $modifiers = self::calculate_park_modifiers($park, $hour_data);
                 $score += $modifiers;
+            }
+
+            // Time-of-day bonus: early morning and evening are better for walks
+            $preferred_hours = [6, 7, 8, 18, 19, 20];
+            if (in_array($hour_data['hour'], $preferred_hours)) {
+                $score += 8;
             }
             
             $hour = $hour_data['hour'];
@@ -66,10 +76,15 @@ class DogPark_Scoring {
     }
     
     private static function calculate_heat_penalty($temp) {
-        if ($temp > 35) return 10; // X rating
+        // Hot end
+        if ($temp > 35) return 10; // dangerously hot - X rating
         if ($temp > 30) return 6;
         if ($temp > 25) return 3;
         if ($temp > 20) return 1;
+        // Cold end - paw pad damage risk below 5C, discomfort below 10C
+        if ($temp < 5)  return 10; // dangerously cold - X rating
+        if ($temp < 10) return 6;
+        if ($temp < 15) return 2;
         return 0;
     }
     
@@ -92,6 +107,15 @@ class DogPark_Scoring {
         $temp = $hour_data['temp'];
         $uv = $hour_data['uv'];
         
+        // Drainage modifier (only matters when raining)
+        if (isset($park->drainage) && $hour_data['rain'] > 30) {
+            switch ($park->drainage) {
+                case 'good':     $modifiers += 5;  break; // bonus: water runs off
+                case 'moderate': /* no change */   break;
+                case 'bad':      $modifiers -= 15; break; // muddy, unsafe
+            }
+        }
+
         // Shade modifier (only if temp > 25°C or UV > 5)
         if ($temp > 25 || $uv > 5) {
             switch ($park->shade) {
@@ -101,8 +125,9 @@ class DogPark_Scoring {
             }
         }
         
-        // Water modifier (only if temp > 25°C)
-        if ($temp > 25 && $park->water === false) {
+        // Water modifier (only if temp > 25°C and water confirmed absent).
+        // wpdb returns MySQL BOOLEAN as PHP string "0"/"1"/null, so === false never matches.
+        if ($temp > 25 && $park->water !== null && (int) $park->water === 0) {
             $modifiers -= 15;
         }
         
@@ -126,11 +151,21 @@ class DogPark_Scoring {
             $explanation[] = "Υψηλή υπεριώδης ({$hour_data['uv']})";
         }
         
+        if ($hour_data['temp'] < 10) {
+            $explanation[] = "Πολύ κρύο ({$hour_data['temp']}°C) - κίνδυνος για τα πελματά";
+        } elseif ($hour_data['temp'] < 15) {
+            $explanation[] = "Κρύο ({$hour_data['temp']}°C)";
+        }
+
         if ($hour_data['wind'] > 20) {
             $explanation[] = "Δυνατός άνεμος ({$hour_data['wind']} km/h)";
         }
         
         if ($park) {
+            if (isset($park->drainage) && $park->drainage === 'bad' && $hour_data['rain'] > 30) {
+                $explanation[] = "Δύσκολη απορροή - λάσπη";
+            }
+
             if ($park->shade === 'good' && ($hour_data['temp'] > 25 || $hour_data['uv'] > 5)) {
                 $explanation[] = "Καλή σκιά";
             }
